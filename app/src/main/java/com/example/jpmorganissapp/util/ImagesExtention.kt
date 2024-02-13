@@ -1,4 +1,4 @@
-package com.example.jpmorganissapp.domain.extentions
+package com.example.jpmorganissapp.util
 
 import android.content.Context
 import android.graphics.Bitmap

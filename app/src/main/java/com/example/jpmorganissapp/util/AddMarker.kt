@@ -6,7 +6,6 @@ import android.content.DialogInterface
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentManager
 import com.example.jpmorganissapp.R
-import com.example.jpmorganissapp.domain.extentions.convertRtoBitmap
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
