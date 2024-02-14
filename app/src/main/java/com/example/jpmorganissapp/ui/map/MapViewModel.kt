@@ -9,6 +9,7 @@ import com.example.jpmorganissapp.domain.model.AstrosModel
 import com.example.jpmorganissapp.domain.model.IssModel
 import com.example.jpmorganissapp.domain.model.UiState
 import com.example.jpmorganissapp.domain.usecase.LocationTrackerUseCase
+import com.example.jpmorganissapp.util.MeasurementSystem
 import com.example.jpmorganissapp.util.formatDistance
 import com.example.jpmorganissapp.util.toLocation
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -58,7 +59,7 @@ class MapViewModel @Inject constructor(
                     currentLocation.distanceTo(issModel.toLocation())
                 }
             }
-            distance?.toDouble()?.let { formatDistance(it) }?:"measuring..."
+            distance?.toDouble()?.let { formatDistance(it,2, MeasurementSystem.METRIC) }?:"measuring..."
         }else "measuring..."
     }.stateIn(viewModelScope, SharingStarted.Eagerly,"measuring...")
 
@@ -81,8 +82,9 @@ class MapViewModel @Inject constructor(
         astrosRepo.getAstros().onStart {
             _astrosModelsState.value = UiState.Loading
         }.onEach {
-            if (it.isSuccess &&  it.getOrNull()!=null){
-                _astrosModelsState.value = UiState.Success(it)
+            val astros =it.getOrNull()
+            if (it.isSuccess &&  astros!=null){
+                _astrosModelsState.value = UiState.Success(astros)
             }else{
                 // Handle error to display
                 _astrosModelsState.value = UiState.Error(it.exceptionOrNull()?.message?:"Error happened")

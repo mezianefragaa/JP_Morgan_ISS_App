@@ -10,11 +10,11 @@ private const val TO_MILE = 1 / 1609.344
  */
 fun formatDistance(
     dist: Double,
-    precision: Int = 2,
-    system: MeasurementSystem = MeasurementSystem.METRIC
+    precision : Int,
+    metric: MeasurementSystem,
 ): String {
 
-    return when (system) {
+    return when (metric) {
        MeasurementSystem.METRIC -> {
             if (dist <= 1000) {
                 "%.0f m".format(dist)

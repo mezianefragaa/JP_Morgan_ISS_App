@@ -8,4 +8,7 @@ sealed class UiState<out R> {
     fun isError() = this is Error
 
     fun isSuccess() = this is Success
+
+    @Suppress("UNCHECKED_CAST")
+    fun <T>getDataOrNull():T? = ((this as? Success)?.data) as? T
 }

@@ -15,19 +15,19 @@ import androidx.lifecycle.lifecycleScope
 import com.example.jpmorganissapp.R
 import com.example.jpmorganissapp.data.source.remote.dto.AstrosDto
 import com.example.jpmorganissapp.databinding.FragmentMapsBinding
+import com.example.jpmorganissapp.domain.model.AstrosModel
 import com.example.jpmorganissapp.domain.model.IssModel
 import com.example.jpmorganissapp.domain.model.UiState
-import com.example.jpmorganissapp.util.addMarker
+import com.example.jpmorganissapp.util.getMapMarkerCallback
 import com.example.jpmorganissapp.util.locationPermissionsGranted
 import com.example.jpmorganissapp.util.toLatLng
 import com.example.jpmorganissapp.util.toLatlng
+import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onSubscription
-import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MapsFragment : Fragment() {
@@ -98,56 +98,65 @@ class MapsFragment : Fragment() {
             binding.distance = "distance: ".plus(it)
         }.launchIn(lifecycleScope)
 
+        mapViewModel.issModelsState.onEach{ isslocation ->
+            when (isslocation) {
+                is UiState.Loading -> Unit
+                is UiState.Success -> Unit
+                is UiState.Error -> {
+                     Toast.makeText(
+                        requireContext(),
+                        "ISS Coordinates not found",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                }
+                else -> Unit
+            }
+        }.launchIn(lifecycleScope)
+
+        mapViewModel.locationModelState.onEach { myLocation ->
+            when(myLocation){
+                is UiState.Loading -> Unit
+                is UiState.Success -> Unit
+                is UiState.Error -> {
+                    Toast.makeText(
+                        requireContext(),
+                        "My Location not found",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                else -> Unit
+            }
+        }.launchIn(lifecycleScope)
+
         /**
          * check if satellite coordinates if available then Onclick display Satellite marker
          * check if astros names are available then click on the Satellite displayed in the map to show the list of astros
          *  note : addmarker() is another extension function that handles markers and onclick Listners
          */
         binding.btnLocateSatellite.setOnClickListener {
-            lifecycleScope.launch {
+            val issLatLong: LatLng? = (mapViewModel.issModelsState.value?.getDataOrNull<IssModel>())?.toLatlng()
+            val astros: List<AstrosModel>? = (mapViewModel.astrosModelsState.value?.getDataOrNull<List<AstrosModel>>())
+            if (issLatLong!=null){
+                val dialogMessage = astros?.joinToString(separator = ",\n") { it.name }
+                val callback = getMapMarkerCallback(
+                    location = issLatLong,
+                    context = requireContext(),
+                    satellite = R.drawable.satellite,
+                    dialogMessage = dialogMessage,
+                    btnOk = R.string.done
+                )
+                (this@MapsFragment.childFragmentManager.findFragmentById(R.id.map) as? SupportMapFragment)?.getMapAsync(callback)
+            }else if (mapViewModel.issModelsState.value?.isSuccess() != true){
+                //todo using a snack bar with an action button for try again
+                     Toast.makeText(
+                        requireContext(),
+                        "ISS Coordinates not available, working on it ....", //todo use string resource value
+                        Toast.LENGTH_SHORT
+                    ).show()
 
-                mapViewModel.issModelsState.firstOrNull().let { isslocation ->
-                    when (isslocation) {
-                        is UiState.Success ->
-                            mapViewModel.astrosModelsState.firstOrNull().let { astros ->
-                                when (astros) {
-                                    is UiState.Success -> addMarker(
-                                        (isslocation.data as IssModel).toLatlng(),
-                                        requireContext(),
-                                        this@MapsFragment.childFragmentManager,
-                                        R.drawable.satellite,
-                                        astros.data,
-                                        R.string.done
-                                    )
-
-                                    else -> {
-
-                                        addMarker(
-                                            (isslocation.data as IssModel).toLatlng(),
-                                            requireContext(),
-                                            this@MapsFragment.childFragmentManager,
-                                            R.drawable.satellite,
-                                            null,
-                                            0
-                                        )
-                                    }
-                                }
-                            }
-
-                        else -> {
-                            val toast = Toast.makeText(
-                                requireContext(),
-                                "ISS Coordinates not found",
-                                Toast.LENGTH_SHORT
-                            )
-                            toast.show()
-                        }
-
-                    }
-                }
-
+                mapViewModel.getIssLocations()
             }
-
         }
         /**
          * Locate me is the green button to show the my current location
@@ -155,22 +164,27 @@ class MapsFragment : Fragment() {
          *
          */
         binding.btnLocateMe.setOnClickListener {
-            lifecycleScope.launch{
-                mapViewModel.locationModelState.firstOrNull().let { myLocation ->
-                    when(myLocation){
-                        is UiState.Success -> addMarker((myLocation.data as Location).toLatLng(),requireContext(),this@MapsFragment.childFragmentManager,R.drawable.drawable_location,null,0 )
-                        else -> {
-                            val toast = Toast.makeText(
-                                requireContext(),
-                                "My Location not found",
-                                Toast.LENGTH_SHORT
-                            )
-                            toast.show()
-                        }
-                    }
+            val issLatLong: LatLng?= (mapViewModel.locationModelState.value?.getDataOrNull<Location>())?.toLatLng()
+            val astros: List<AstrosModel>? = (mapViewModel.astrosModelsState.value?.getDataOrNull<List<AstrosModel>>())
+            if (issLatLong!=null){
+                val dialogMessage = astros?.joinToString(separator = ",\n") { it.name }
+                val callback = getMapMarkerCallback(
+                    location = issLatLong,
+                    context = requireContext(),
+                    satellite = R.drawable.drawable_location,
+                    dialogMessage = dialogMessage,
+                    btnOk = R.string.done
+                )
+                (this@MapsFragment.childFragmentManager.findFragmentById(R.id.map) as? SupportMapFragment)?.getMapAsync(callback)
+            }else if (mapViewModel.issModelsState.value?.isSuccess() != true){
+                //todo using a snack bar with an action button for try again
+                Toast.makeText(
+                    requireContext(),
+                    "your location not available, working on it ....", //todo use string resource value
+                    Toast.LENGTH_SHORT
+                ).show()
 
-
-                }
+                mapViewModel.startLocationTracker()
             }
         }
 
